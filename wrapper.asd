@@ -3,6 +3,6 @@
   :version "0.0.1"
   :author ("@Tun"
            "Grolter <varedif.a.s@gmail.com>")
-  :licence "MIT (probably)"
+  :licence "MIT"
   :depends-on ("alexandria")
   :componponents ((:file "wrapper")))
