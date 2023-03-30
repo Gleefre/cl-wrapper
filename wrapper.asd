@@ -5,4 +5,4 @@
            "Grolter <varedif.a.s@gmail.com>")
   :licence "MIT"
   :depends-on ("alexandria")
-  :componponents ((:file "wrapper")))
+  :components ((:file "wrapper")))
