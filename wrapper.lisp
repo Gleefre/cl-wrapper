@@ -1,7 +1,11 @@
 (defpackage #:wrapper
   (:use #:cl)
-  (:export #:wrap-if #:wrap-if-not
-           #:naive-wrap-if #:naive-wrap-if-not)
+  (:export #:wrap-if
+           #:wrap-if*
+           #:wrap-if-not
+           #:naive-wrap-if
+           #:naive-wrap-if*
+           #:naive-wrap-if-not)
   (:import-from #:alexandria
                 #:ensure-list
                 #:with-gensyms
@@ -77,3 +81,21 @@ Takes an extra parameter, which indicates which variables should be transferred 
           (func-definition (func-definition func transfer-vars body)))
       `(flet (,func-definition)
          (naive-wrap-if-not ,test ,wrap-form ,call)))))
+
+;;; Multiple (test form) pairs in one wrap
+
+(defmacro naive-wrap-if* ((&rest wraps) &body body)
+  "Like NAIVE-WRAP-IF but allows to specify multiple TEST-FORM pairs."
+  (if (null wraps)
+      `(progn ,@body)
+      (progn
+        `(naive-wrap-if ,(first (car wraps)) ,(second (car wraps))
+           (naive-wrap-if* (,@(cdr wraps)) ,@body)))))
+
+(defmacro wrap-if* (transfer-vars (&rest wraps) &body body)
+  "Like WRAP-IF but allows to specify multiple TEST-FORM pairs."
+  (if (null wraps)
+      `(progn ,@body)
+      (progn
+        `(wrap-if ,transfer-vars ,(first (car wraps)) ,(second (car wraps))
+           (wrap-if* ,transfer-vars (,@(cdr wraps)) ,@body)))))
