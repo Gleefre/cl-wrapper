@@ -1,0 +1,96 @@
+#+title: Wrapper
+#+author: Gleefre
+#+email: varedif.a.s@gmail.com
+
+#+language: en
+#+options: toc:nil
+
+=wrapper= library provides a macro for optionally wrapping code into a given form.
+
+* Naive approach
+  The naive and simple way to optionally nest code would be the following:
+  #+BEGIN_SRC common-lisp
+  (if <test>
+      (with-something
+        (progn <body>))
+      (progn
+        <body>))
+  #+END_SRC
+  ~naive-wrap-if~ does exactly that. It takes the test as its first argument,
+  wrapper form as its second argument and the body.
+
+  A usage example:
+  #+BEGIN_SRC common-lisp
+  (defun foo (x)
+    (naive-wrap-if (oddp x)
+        (let ((x (1+ x))))
+      x))
+  (foo 1)  ; => 2
+  (foo 2)  ; => 2
+  #+END_SRC
+* Avoiding code duplication
+  The main problem with the naive approach is the code duplication. If you have
+  10 nested ~wrap-if~ s, the compiler will need to compile the body 1024 times.
+
+  ~wrap-if~ solves this problem by moving the body to a local function using
+  ~flet~. This means, however, that lexical environment introduced by the
+  wrapper form is not be visible to the body. This is solved by passing lexical
+  bindings as arguments to the body function.
+
+  ~wrap-if~ takes the list of lexical variables that needs to be transferred as
+  its first argument, the test as its second argument, the wrapper form as its
+  third argument and the body.
+
+  Note that only lexical variables can be transferred, as the macro uses the
+  ~symbol-macrolet~ on symbols naming variables to transfer the /place/ rather
+  than the /value/, which means that changes to the transferred variable are
+  transferred back to the lexical environment they are defined in. As it is not
+  allowed to define a local symbol macro on a special variable, *it is an error
+  to use special variables in the* ~transfer-vars~ *argument*.
+
+  The previous example using ~wrap-if~:
+  #+BEGIN_SRC common-lisp
+  (defun foo (x)
+    (wrap-if (x) (oddp x)
+        (let ((x (1+ x))))
+      x))
+  (bar 1)  ; => 2
+  (bar 2)  ; => 2
+  #+END_SRC
+  We need to transfer ~x~ as the wrapper form creates a new binding to ~x~ that
+  we want to access.
+* Small details
+** ~wrap-if-not~, ~naive-wrap-if-not~
+   ~wrap-if-not~ and ~naive-wrap-if-not~ wrap the body into the given wrapper
+   for if the test is /false/ instead of /true/.
+   #+BEGIN_SRC common-lisp
+   (naive-wrap-if-not test (with-wrap-form)
+     (body))
+   ;; is same as
+   (naive-wrap-if (not test) (with-wrap-form)
+     (body))
+   #+END_SRC common-lisp
+** ~wrap-if*~, ~naive-wrap-if*~
+   ~wrap-if*~ and ~naive-wrap-if*~ allow you to specify multiple test-form pairs.
+   They expand into nested ~wrap-if~ and ~naive-wrap-if~ forms respectively.
+   #+BEGIN_SRC common-lisp
+   (wrap-if* (vars) ((test-1 form-1) (test-2 form-2))
+     (body))
+   ;; is same as
+   (wrap-if (vars) test-1 form-1
+     (wrap-if (vars) test-2 form-2
+       (body)))
+   #+END_SRC common-lisp   
+* More examples
+  If you have a function that reads input from passed ~source~ that can be a
+  stream, pathname or a string, you can use ~wrap-if~ to keep using
+  ~with-input-from-file~ instead of ~open~, ~close~ and ~unwind-protect~ but
+  avoiding code duplication:
+  #+BEGIN_SRC common-lisp
+  (defun get-line (source)
+    "Reads a single line from the given stream, pathname or string."
+    (wrap-if* (source)
+        (((stringp source) (with-input-from-string (source source)))
+         ((pathnamep source) (alexandria:with-input-from-file (source source))))
+      (read-line source)))
+  #+END_SRC
