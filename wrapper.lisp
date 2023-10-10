@@ -70,7 +70,7 @@ Takes an extra parameter, which indicates which variables should be transferred 
          (naive-wrap-if ,test ,wrap-form ,call)))))
 
 (defmacro wrap-if-not (transfer-vars test wrap-form &body body)
-  "Like naive-wrap-if but avoid duplication using flet and symbol-macrolet.
+  "Like naive-wrap-if-not but avoid duplication using flet and symbol-macrolet.
 Takes an extra parameter, which indicates which variables should be transferred to body function."
   (with-gensyms (func)
     (let ((call (func-call func transfer-vars))
