@@ -60,16 +60,6 @@
   We need to transfer ~x~ as the wrapper form creates a new binding to ~x~ that
   we want to access.
 * Small details
-** ~wrap-if-not~, ~naive-wrap-if-not~
-   ~wrap-if-not~ and ~naive-wrap-if-not~ wrap the body into the given wrapper
-   for if the test is /false/ instead of /true/.
-   #+BEGIN_SRC common-lisp
-   (naive-wrap-if-not test (with-wrap-form)
-     (body))
-   ;; is same as
-   (naive-wrap-if (not test) (with-wrap-form)
-     (body))
-   #+END_SRC common-lisp
 ** ~wrap-if*~, ~naive-wrap-if*~
    ~wrap-if*~ and ~naive-wrap-if*~ allow you to specify multiple test-form pairs.
    They expand into nested ~wrap-if~ and ~naive-wrap-if~ forms respectively.

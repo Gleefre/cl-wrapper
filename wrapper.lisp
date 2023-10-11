@@ -2,10 +2,8 @@
   (:use #:cl)
   (:export #:wrap-if
            #:wrap-if*
-           #:wrap-if-not
            #:naive-wrap-if
-           #:naive-wrap-if*
-           #:naive-wrap-if-not)
+           #:naive-wrap-if*)
   (:import-from #:alexandria
                 #:ensure-list
                 #:with-gensyms
@@ -26,12 +24,6 @@
   `(if ,test
        ,(wrap wrap-form body)
        (progn ,@body)))
-
-(defmacro naive-wrap-if-not (test wrap-form &body body)
-  "If TEST is NIL wraps body into WRAP-FORM. Have an implicit progn. Code is duplicated."
-  `(if ,test
-       (progn ,@body)
-       ,(wrap wrap-form body)))
 
 ;;; More general wrap-if
 ;;; Uses flet and @tun
@@ -72,15 +64,6 @@ Takes an extra parameter, which indicates which variables should be transferred 
           (func-definition (func-definition func transfer-vars body)))
       `(flet (,func-definition)
          (naive-wrap-if ,test ,wrap-form ,call)))))
-
-(defmacro wrap-if-not (transfer-vars test wrap-form &body body)
-  "Like naive-wrap-if-not but avoid duplication using flet and symbol-macrolet.
-Takes an extra parameter, which indicates which variables should be transferred to body function."
-  (with-gensyms (func)
-    (let ((call (func-call func transfer-vars))
-          (func-definition (func-definition func transfer-vars body)))
-      `(flet (,func-definition)
-         (naive-wrap-if-not ,test ,wrap-form ,call)))))
 
 ;;; Multiple (test form) pairs in one wrap
 
