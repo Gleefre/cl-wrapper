@@ -43,7 +43,7 @@
 (defun place-value (place)
   (funcall (place-getter place)))
 
-(defun (setf place-value) (place value)
+(defun (setf place-value) (value place)
   (funcall (place-setter place) value))
 
 (defun make-place (x)
