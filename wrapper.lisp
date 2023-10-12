@@ -111,6 +111,38 @@ Takes an extra parameter, which indicates which variables should be transferred 
            (naive-wrap-if ,test ,wrap-form
              ,*call-wrapper*))))))
 
+(define-transfer :variable (name)
+  (push name *lambda-list*)
+  (push name *call-arguments*))
+
+(define-transfer :function (name)
+  (with-gensyms (transfer-function-var)
+    (push transfer-function-var *lambda-list*)
+    (push `(function ,name) *call-arguments*)
+    (setf *body-wrapper*
+          `(flet ((,name (&rest args) (apply ,transfer-function-var args)))
+             ,*body-wrapper*))))
+
+(declaim (inline place (setf place)))
+
+(defun place (getter setter)
+  (declare (ignore setter))
+  (funcall getter))
+
+(defun (setf place) (value getter setter)
+  (declare (ignore getter))
+  (funcall setter value))
+
+(define-transfer :place (name &optional (var-name name))
+  (with-gensyms (place-getter place-setter)
+    (push place-getter *lambda-list*)
+    (push place-setter *lambda-list*)
+    (push `(lambda () ,name) *call-arguments*)
+    (push `(lambda (v) (setf ,name v)) *call-arguments*)
+    (setf *body-wrapper*
+          `(symbol-macrolet ((,var-name (place ,place-getter ,place-setter)))
+             ,*body-wrapper*))))
+
 ;;; Multiple (test form) pairs in one wrap
 
 (defmacro naive-wrap-if* ((&rest wraps) &body body)
