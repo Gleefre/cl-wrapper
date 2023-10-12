@@ -75,9 +75,8 @@ Takes an extra parameter, which indicates which variables should be transferred 
 (defparameter *transfer-ht* (make-hash-table :test #'equal))
 
 (defmacro define-transfer (type lambda-list &body body)
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (setf (gethash ,type *transfer-ht*)
-           (lambda ,lambda-list ,@body))))
+  `(setf (gethash ,type *transfer-ht*)
+         (lambda ,lambda-list ,@body)))
 
 (defun transfer-not-found (type)
   (lambda (name &rest args)
