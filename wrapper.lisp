@@ -65,6 +65,52 @@ Takes an extra parameter, which indicates which variables should be transferred 
       `(flet (,func-definition)
          (naive-wrap-if ,test ,wrap-form ,call)))))
 
+;;; Extensible wrap-if
+
+(defvar *lambda-list*)
+(defvar *call-arguments*)
+(defvar *call-wrapper*)
+(defvar *body-wrapper*)
+
+(defparameter *transfer-ht* (make-hash-table :test #'equal))
+
+(defmacro define-transfer (type lambda-list &body body)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (setf (gethash ,type *transfer-ht*)
+           (lambda ,lambda-list ,@body))))
+
+(defun transfer-not-found (type)
+  (lambda (name &rest args)
+    (warn "Transfer ~A for the name ~A not found ( ~S )"
+          type
+          name
+          `(,name ,type ,@args))))
+
+(defmacro parsing ((spec) &body body)
+  `(let ((*lambda-list* ())
+         (*call-arguments* ())
+         (*call-wrapper* '<call>)
+         (*body-wrapper* '<body>))
+     (loop for (name type . args) in (mapcar #'ensure-list ,spec)
+           do (apply (gethash (or type :default)
+                              *transfer-ht*
+                              (transfer-not-found (or type :default)))
+                     name
+                     args))
+     ,@body))
+
+(defmacro wrap-if-ext ((test wrap-form) transfer-specs &body body)
+  "Like naive-wrap-if but avoid duplication using flet and symbol-macrolet.
+Takes an extra parameter, which indicates which variables should be transferred to body function."
+  (with-gensyms (body-function)
+    (parsing (transfer-specs)
+      `(flet ((,body-function (,@*lambda-list*)
+                (symbol-macrolet ((<body> (progn ,@body)))
+                  ,*body-wrapper*)))
+         (symbol-macrolet ((<call> (,body-function ,@*call-arguments*)))
+           (naive-wrap-if ,test ,wrap-form
+             ,*call-wrapper*))))))
+
 ;;; Multiple (test form) pairs in one wrap
 
 (defmacro naive-wrap-if* ((&rest wraps) &body body)
