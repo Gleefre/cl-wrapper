@@ -132,12 +132,12 @@ Takes an extra parameter, which indicates which variables should be transferred 
   (declare (ignore getter))
   (funcall setter value))
 
-(define-transfer :place (name &optional (var-name name))
+(define-transfer :place (place &optional (var-name place))
   (with-gensyms (place-getter place-setter)
     (push place-getter *lambda-list*)
     (push place-setter *lambda-list*)
-    (push `(lambda () ,name) *call-arguments*)
-    (push `(lambda (v) (setf ,name v)) *call-arguments*)
+    (push `(lambda () ,place) *call-arguments*)
+    (push `(lambda (v) (setf ,place v)) *call-arguments*)
     (setf *body-wrapper*
           `(symbol-macrolet ((,var-name (place ,place-getter ,place-setter)))
              ,*body-wrapper*))))
