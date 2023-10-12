@@ -71,14 +71,12 @@ Takes an extra parameter, which indicates which variables should be transferred 
   "Like NAIVE-WRAP-IF but allows to specify multiple TEST-FORM pairs."
   (if (null wraps)
       `(progn ,@body)
-      (progn
-        `(naive-wrap-if ,(first (car wraps)) ,(second (car wraps))
-           (naive-wrap-if* (,@(cdr wraps)) ,@body)))))
+      `(naive-wrap-if ,(first (car wraps)) ,(second (car wraps))
+         (naive-wrap-if* (,@(cdr wraps)) ,@body))))
 
 (defmacro wrap-if* (transfer-vars (&rest wraps) &body body)
   "Like WRAP-IF but allows to specify multiple TEST-FORM pairs."
   (if (null wraps)
       `(progn ,@body)
-      (progn
-        `(wrap-if ,transfer-vars ,(first (car wraps)) ,(second (car wraps))
-           (wrap-if* ,transfer-vars (,@(cdr wraps)) ,@body)))))
+      `(wrap-if ,transfer-vars ,(first (car wraps)) ,(second (car wraps))
+         (wrap-if* ,transfer-vars (,@(cdr wraps)) ,@body))))
