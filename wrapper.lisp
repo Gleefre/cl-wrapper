@@ -142,6 +142,30 @@ Takes an extra parameter, which indicates which variables should be transferred 
           `(symbol-macrolet ((,var-name (place ,place-getter ,place-setter)))
              ,*body-wrapper*))))
 
+(define-transfer :nomine (name namespace)
+  (with-gensyms (transfer-nomine-var)
+    (let ((ns (in-nomine:symbol-namespace namespace)))
+      (push transfer-nomine-var *lambda-list*)
+      (push `(,(in-nomine::namespace-macro-accessor ns) ,name)
+            *call-arguments*)
+      (setf *body-wrapper*
+            `(,(in-nomine::namespace-let-name ns)
+              ((,name ,transfer-nomine-var))
+              ,*body-wrapper*)))))
+
+(define-transfer :nomine-place (place namespace &optional (var-name place))
+  (with-gensyms (place-getter place-setter)
+    (let* ((ns (in-nomine:symbol-namespace namespace))
+           (P (in-nomine::namespace-macro-accessor ns))
+           (P-macrolet (in-nomine::namespace-macrolet-name ns)))
+      (push place-getter *lambda-list*)
+      (push place-setter *lambda-list*)
+      (push `(lambda () (,P ,place)) *call-arguments*)
+      (push `(lambda (v) (setf (,P ,place) v)) *call-arguments*)
+      (setf *body-wrapper*
+            `(,P-macrolet ((,var-name (place ,place-getter ,place-setter)))
+               ,*body-wrapper*)))))
+
 ;;; Multiple (test form) pairs in one wrap
 
 (defmacro naive-wrap-if* ((&rest wraps) &body body)
