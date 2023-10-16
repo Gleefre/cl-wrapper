@@ -7,7 +7,9 @@
   (:import-from #:alexandria
                 #:ensure-list
                 #:with-gensyms
-                #:make-gensym-list))
+                #:make-gensym-list)
+  (:import-from #:captures
+                #:flet/capture))
 
 (in-package #:wrapper)
 
@@ -67,80 +69,12 @@ Takes an extra parameter, which indicates which variables should be transferred 
 
 ;;; Extensible wrap-if
 
-(defvar *lambda-list*)
-(defvar *call-arguments*)
-(defvar *call-wrapper*)
-(defvar *body-wrapper*)
-
-(defparameter *transfer-ht* (make-hash-table :test #'equal))
-
-(defmacro define-transfer (type lambda-list &body body)
-  `(setf (gethash ,type *transfer-ht*)
-         (lambda ,lambda-list ,@body)))
-
-(defun transfer-not-found (type)
-  (lambda (name &rest args)
-    (warn "Transfer ~A for the name ~A not found ( ~S )"
-          type
-          name
-          `(,name ,type ,@args))))
-
-(defmacro parsing ((spec) &body body)
-  `(let ((*lambda-list* ())
-         (*call-arguments* ())
-         (*call-wrapper* '<call>)
-         (*body-wrapper* '<body>))
-     (loop for (name type . args) in (mapcar #'ensure-list ,spec)
-           do (apply (gethash (or type :default)
-                              *transfer-ht*
-                              (transfer-not-found (or type :default)))
-                     name
-                     args))
-     ,@body))
-
-(defmacro wrap-if-ext ((test wrap-form) transfer-specs &body body)
+(defmacro wrap-if-ext (test wrap-form &body body)
   "Like naive-wrap-if but avoid duplication using flet and symbol-macrolet.
-Takes an extra parameter, which indicates which variables should be transferred to body function."
-  (with-gensyms (body-function)
-    (parsing (transfer-specs)
-      `(flet ((,body-function (,@*lambda-list*)
-                (symbol-macrolet ((<body> (progn ,@body)))
-                  ,*body-wrapper*)))
-         (symbol-macrolet ((<call> (,body-function ,@*call-arguments*)))
-           (naive-wrap-if ,test ,wrap-form
-             ,*call-wrapper*))))))
-
-(define-transfer :variable (name)
-  (push name *lambda-list*)
-  (push name *call-arguments*))
-
-(define-transfer :function (name)
-  (with-gensyms (transfer-function-var)
-    (push transfer-function-var *lambda-list*)
-    (push `(function ,name) *call-arguments*)
-    (setf *body-wrapper*
-          `(flet ((,name (&rest args) (apply ,transfer-function-var args)))
-             ,*body-wrapper*))))
-
-(declaim (inline place (setf place)))
-
-(defun place (getter setter)
-  (declare (ignore setter))
-  (funcall getter))
-
-(defun (setf place) (value getter setter)
-  (declare (ignore getter))
-  (funcall setter value))
-
-(define-transfer :place (place &optional (var-name place))
-  (with-gensyms (place-getter place-setter)
-    (push place-getter *lambda-list*)
-    (push place-setter *lambda-list*)
-    (push `(lambda () ,place) *call-arguments*)
-    (push `(lambda (v) (setf ,place v)) *call-arguments*)
-    (setf *body-wrapper*
-          `(symbol-macrolet ((,var-name (place ,place-getter ,place-setter)))
-             ,*body-wrapper*))))
+Use CAPTURE declarations to transfer variables."
+  (with-gensyms (func)
+    `(flet/capture ((,func () ,@body))
+       (naive-wrap-if ,test ,wrap-form (,func)))))
 
 ;;; Multiple (test form) pairs in one wrap
 

@@ -4,5 +4,5 @@
   :author ("tuntap"
            "Grolter <varedif.a.s@gmail.com>")
   :licence "MIT"
-  :depends-on ("alexandria")
+  :depends-on ("alexandria" "captures")
   :components ((:file "wrapper")))
