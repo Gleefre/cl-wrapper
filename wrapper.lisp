@@ -27,49 +27,10 @@
        ,(wrap wrap-form body)
        (progn ,@body)))
 
-;;; More general wrap-if
-;;; Uses flet and @tun
+;;; More general, extensible wrap-if
+;;; Uses flet/captures and is inspired by @tun
 
-(defstruct (place (:constructor %make-place (getter setter)))
-  getter
-  setter)
-
-(defun place-value (place)
-  (funcall (place-getter place)))
-
-(defun (setf place-value) (value place)
-  (funcall (place-setter place) value))
-
-(defun make-place (x)
-  `(%make-place
-    (lambda () ,x)
-    (lambda (value) (setf ,x value))))
-
-(defun func-definition (name transfer-vars body)
-  (let ((lambda-list (make-gensym-list (length transfer-vars) "TRANSFER-VAR")))
-    `(,name
-      ,lambda-list
-      (symbol-macrolet ,(mapcar (lambda (transfer-var flet-parameter)
-                                  `(,transfer-var (place-value ,flet-parameter)))
-                         transfer-vars
-                         lambda-list)
-        ,@body))))
-
-(defun func-call (name transfer-vars)
-  `(,name ,@(mapcar #'make-place transfer-vars)))
-
-(defmacro wrap-if (transfer-vars test wrap-form &body body)
-  "Like naive-wrap-if but avoid duplication using flet and symbol-macrolet.
-Takes an extra parameter, which indicates which variables should be transferred to body function."
-  (with-gensyms (func)
-    (let ((call (func-call func transfer-vars))
-          (func-definition (func-definition func transfer-vars body)))
-      `(flet (,func-definition)
-         (naive-wrap-if ,test ,wrap-form ,call)))))
-
-;;; Extensible wrap-if
-
-(defmacro wrap-if-ext (test wrap-form &body body)
+(defmacro wrap-if (test wrap-form &body body)
   "Like naive-wrap-if but avoid duplication using flet and symbol-macrolet.
 Use CAPTURE declarations to transfer variables."
   (with-gensyms (func)
@@ -85,9 +46,9 @@ Use CAPTURE declarations to transfer variables."
       `(naive-wrap-if ,(first (car wraps)) ,(second (car wraps))
          (naive-wrap-if* (,@(cdr wraps)) ,@body))))
 
-(defmacro wrap-if* (transfer-vars (&rest wraps) &body body)
+(defmacro wrap-if* ((&rest wraps) &body body)
   "Like WRAP-IF but allows to specify multiple TEST-FORM pairs."
   (if (null wraps)
       `(progn ,@body)
-      `(wrap-if ,transfer-vars ,(first (car wraps)) ,(second (car wraps))
-         (wrap-if* ,transfer-vars (,@(cdr wraps)) ,@body))))
+      `(wrap-if ,(first (car wraps)) ,(second (car wraps))
+         (wrap-if* (,@(cdr wraps)) ,@body))))
