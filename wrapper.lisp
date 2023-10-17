@@ -50,5 +50,6 @@ Use CAPTURE declarations to transfer variables."
   "Like WRAP-IF but allows to specify multiple TEST-FORM pairs."
   (if (null wraps)
       `(progn ,@body)
-      `(wrap-if ,(first (car wraps)) ,(second (car wraps))
-         (wrap-if* (,@(cdr wraps)) ,@body))))
+      (with-gensyms (func)
+        `(flet/capture ((,func () ,@body))
+           (naive-wrap-if* ,wraps (,func))))))
